@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        空间对象几何特征编码
+    </title>
+</head>
+
+<body onload="drawcor()">
+    <!-- 打开文件输入页面的设计 -->
+    <div style="width:520pX;height:180pX;margin-left:20pX;margin-top:20pX;border:medium double rgb(0,0,0)">
+        <h style="font-family:宋体;margin-left:125pX;margin-top:100pX;font-size:20pX;">
+            <strong>空间对象几何特征编码</strong>
+        </h>
+        <p style="font-family:宋体;font-size:15pX;margin-top:5pX;margin-left:5pX;">&nbsp 问题：打开并读取ESRI ArcInfo generate文件，并根据文件将结果绘制在屏幕上</p>
+        <div1>
+            <div>
+                <from style="margin-left:50pX;font-size:15px;">
+                    请选择generate文件：
+                    <input id="File" type="file" />
+            </div>
+            </from>
+            <p style="margin-top:5px;margin-left:100px;font-size:12px">注：必须选择按generate数据格式编写的文件，否则算法无法执行；</p>
+
+            <button style="margin-left:350pX;margin-top:0px;" type="button" onclick=" get()">确定</button>
+            <button type="button" onclick="clearcanvas();drawcor()">清空当前画布</button>
+        </div1>
+        <br>
+        <p style="position:absolute;margin-left:0px;margin-top:25px;font-size:15px;">绘制结果为：</p>
+
+        <canvas id="canvas" style="border:1px solid #000;margin-top:50px;"></canvas>
+        <script>
+            var canvas = document.getElementById('canvas');
+            var ctext = canvas.getContext('2d');
+            canvas.width = 1220;
+            canvas.height = 360;
+            var startX = 30;//第一个棋盘开始的坐标
+            var startY = 20;
+            var edge = 20;//网格的边长
+
+            // 读取文件写入名字
+            function get() {
+                var files = document.getElementById('File').files;
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var reader = new FileReader();
+                    reader.readAsText(file);//以文本形式读取文件
+                    //成功读取
+                    reader.onload = function (e) {
+                        var record = this.result;//读取文件
+                        draw(record);//绘制该文件中包含的内容
+                    }
+                }
+            }
+            //绘制参考坐标
+            function drawcor() {
+                //绘制横线
+                for (var j = 0; j <= 16; j++) {
+                    ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                    ctext.strokeStyle = "grey";
+                    var x0 = 0;
+                    var y0 = j * edge;
+                    var x1 = edge * 16;
+                    var y1 = edge * j;
+                    ctext.beginPath();
+                    ctext.moveTo(startX + x0, startY + y0);
+                    ctext.lineTo(x1 + startX, y1 + startY);
+                    ctext.stroke();
+                }
+                //绘制纵线
+                for (var j = 0; j <= 16; j++) {
+                    ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                    ctext.strokeStyle = "grey";
+                    var x2 = edge * j;
+                    var y2 = 0;
+                    var x3 = j * edge;
+                    var y3 = edge * 16;
+                    ctext.beginPath();
+                    ctext.moveTo(startX + x2, startY + y2);
+                    ctext.lineTo(x3 + startX, y3 + startY);
+                    ctext.stroke();
+                }
+            }
+            function clearcanvas() {
+                ctext.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            function draw(record)//画名字
+            {
+                var name = record.split('\r\n');
+                var start = false;//用于寻找起点,start为真时表示起点
+                ctext.lineWidth = 10;//设置画笔的宽度和颜色
+                ctext.strokeStyle = "black";
+                //开始读取文件
+                for (var i = 0; i < name.length; i++) {
+                    //寻找起点
+                    if (name[i] == 'end') {
+                        ctext.stroke();//若遇到‘end’则结束该条线段的绘制，并且将start重置为true
+                        start = true;
+                        continue;
+                    }
+                    var point = name[i].split(',');//坐标中去除“，”成为point数组
+                    if (point.length < 2)//此条件判断是L1还是坐标对，L1经过split函数处理后长度为1
+                    {
+                        start = true;//找到“L1”表明找到了起点
+                        continue;//继续寻找起始坐标
+                    }
+
+                    if (start) {//若start为真则表明为起点，用moveTo()函数
+                        var x0 = point[0] * edge;
+                        var y0 = point[1] * edge;
+                        ctext.beginPath();
+                        ctext.moveTo(startX + x0, startY + y0);
+                        start = false;//表示已经过了起点点
+                    }
+                    else {
+                        var x1 = point[0] * edge;
+                        var y1 = point[1] * edge;
+                        ctext.lineTo(x1 + startX, y1 + startY);
+                        start = false;
+                    }
+
+                }
+            }
+        </script>
+</body>
+
+</html>
