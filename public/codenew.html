@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        空间对象几何特征编码
+    </title>
+</head>
+
+<body onload="drawcor()">
+    <!-- 打开文件输入页面的设计 -->
+    <div style="width:650pX;height:275pX;margin-left:20pX;margin-top:5pX;border:medium double rgb(0,0,0)">
+        <h style="font-family:宋体;font-size:18pX;margin-left:220pX;padding-top:5px;letter-spacing:1px;">
+            <strong>空间对象几何特征编码</strong>
+        </h>
+        <div1 style="margin-top:5px;">
+            <div>
+                <from style="margin-left:50pX;margin-top:20px;font-size:15px;font-family:宋体;">
+                    <strong>·请选择文件</strong>
+                    <input id="File" type="file" multiple="mutifile" />
+            </div>
+            <div style="margin-top:10px;">
+                <from style="margin-left:50pX;font-size:15px;font-family:宋体;">
+                    <strong>·空间平面坐标变换：</strong>
+                    <button type="button" onclick="leftTilt()">左斜</button>
+                    <button type="button" onclick="shoulder()">耸肩</button>
+                </from>
+            </div>
+            <div style="margin-top:5px;">
+                <from style="margin-left:50pX;font-size:15px;font-family:宋体;">
+                    <strong>·空间平面坐标变换_对称：</strong>
+                    <button type="button" onclick="leftright()">左右对称</button>
+                    <button type="button" onclick="updown()">上下对称</button>
+                </from>
+            </div>
+            <div style="margin-top:5px;">
+                <from style="margin-left:50pX;font-size:15px;font-family:宋体;">
+                    <strong>·空间平面坐标变换_比例：</strong>
+                    <input id="proportion" type="number" style="height:14px;width:35px;border:1px solid black;" />
+                    <a style="font-size:15px;font-family:宋体">
+                        <strong>倍</strong>
+                    </a>
+                    <button type="button" onclick="big()">放大</button>
+                    <button type="button" onclick="small()">缩小</button>
+                </from>
+            </div>
+            <div style="margin-top:5px;">
+                <from style="margin-left:50pX;font-size:15px;font-family:宋体;">
+                    <strong>·空间平面坐标变换_旋转：</strong>
+                    <input id="degree" type="number" style="height:14px;width:35px;border:1px solid black;" />
+                    <a style="font-size:15px;font-family:宋体">
+                        <strong>度</strong>
+                    </a>
+                    <button type="button" onclick="counterclockwiseT()">逆时针旋转</button>
+                    <button type="button" onclick="clockwiseT()">顺指针旋转</button>
+                </from>
+            </div>
+
+            <div style="margin-top:5px;">
+                <from style="margin-left:50pX;font-size:15px;font-family:宋体;">
+                    <strong>·空间平面坐标变换_平移：</strong>
+                    <input id="length" type="number" style="height:14px;width:35px;border:1px solid black;" />
+                    <a style="font-size:15px;font-family:宋体">
+                        <strong>px</strong>
+                    </a>
+                    <button type="button" onclick="up()">向上平移</button>
+                    <button type="button" onclick="down()">向下平移</button>
+                    <button type="button" onclick="right()">向右平移</button>
+                    <button type="button" onclick="left()">向左平移</button>
+                </from>
+            </div>
+            <p style="font-size:12px;margin-left:52px;">注：必须选择按generate数据格式编写的文件；可同时选择多个文件，但不超过3个；
+                <br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp在恢复默认状态后可选择另一种变换方式；在选择清空当前画布后可重新选择文件</p>
+            </from>
+            <button style="margin-left:400pX;" type="button" onclick=" get()">确定</button>
+            <button type="button" onclick="origins();clearcanvas();drawcor();">清空当前画布</button>
+            <button type="button" onclick="origins(); clearcanvas(); drawcor();get();">恢复默认状态</button>
+        </div1>
+        <br>
+        <!-- <p style="position:absolute;margin-left:0px;margin-top:30px;font-size:15px;">绘制结果为：</p> -->
+
+        <canvas id="canvas" style="border:1px solid #000;margin-top:10px;"></canvas>
+        <script>
+            var canvas = document.getElementById('canvas');
+            var ctext = canvas.getContext('2d');
+            canvas.width = 1220;
+            canvas.height = 420;
+            var startX = 30;//第一个棋盘开始的坐标
+            var startY = 85;
+            var edge = 20;//网格的边长
+            var interval = 400;//网格之间的间隙
+
+            var length;
+            var tan15 = 2 - Math.sqrt(3);//tan15°推导为此计算公式
+            var PI = 3.141592654;
+
+
+            var leftOblique = false;//左斜
+            var shrugged = false;//耸肩
+            var clockwise = false;//顺时针
+            var counterclockwise = false;//逆时针
+            var amplifier = false;//放大
+            var narrow = false;//缩小
+            var xSymmetrical = false;//左右对称
+            var ySymmetrical = false;//上下对称
+            var upTranslation = false;//向上平移
+            var downTranslation = false;//向下平移
+            var leftTranslation = false;//向左平移
+            var rightTranslation = false;//向右平移
+
+            function origins() {
+                edge = 20;//网格的边长
+                interval = 400;//网格之间的间隙
+                leftOblique = false;//左斜
+                shrugged = false;//耸肩
+                clockwise = false;//顺时针
+                counterclockwise = false;//逆时针
+                amplifier = false;//放大
+                narrow = false;//缩小
+                xSymmetrical = false;//左右对称
+                ySymmetrical = false;//上下对称
+                upTranslation = false;//向上平移
+                downTranslation = false;//向下平移
+                leftTranslation = false;//向左平移
+                rightTranslation = false;//向右平移
+            }
+
+            function up() {
+                upTranslation = true;
+                length = parseInt(document.getElementById('length').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                drawcor();
+                get();
+            }
+            function down() {
+                downTranslation = true;
+                length = parseInt(document.getElementById('length').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                drawcor();
+                get();
+            }
+            function left() {
+                leftTranslation = true;
+                length = parseInt(document.getElementById('length').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                drawcor();
+                get();
+            }
+            function right() {
+                rightTranslation = true;
+                length = parseInt(document.getElementById('length').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                drawcor();
+                get();
+            }
+            function leftTilt() {
+                leftOblique = true;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            function shoulder() {
+                shrugged = true;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            function big() {
+                amplifier = true;
+                proportion = parseInt(document.getElementById('proportion').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                edge = edge * proportion;
+                interval = interval * proportion;
+                drawcor();
+                get();
+            }
+            function small() {
+                amplifier = true;
+                proportion = parseFloat(document.getElementById('proportion').value);
+                clearcanvas();//先清空画布重新绘制平移后的画布
+                edge = edge / proportion;
+                interval = interval / proportion;
+                drawcor();
+                get();
+            }
+            function updown() {
+                ySymmetrical = true;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            function leftright() {
+                xSymmetrical = true;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            function clockwiseT() {
+                clockwise = true;
+                degree = parseFloat(document.getElementById('degree').value);
+                degree = degree * PI / 180;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            function counterclockwiseT() {
+                counterclockwise = true;
+                degree = parseFloat(document.getElementById('degree').value);
+                degree = degree * PI / 180;
+                clearcanvas();
+                drawcor();
+                get();
+            }
+            // 读取文件写入名字
+            function get() {
+                var files = document.getElementById('File').files;
+                for (var i = 0; i < files.length; i++) {
+                    var n = 0;
+                    var file = files[i];
+                    var reader = new FileReader();
+                    reader.readAsText(file);//以文本形式读取文件
+                    //成功读取
+                    reader.onload = function (e) {
+                        record = this.result;//读取文件
+                        draw(record, n);//绘制该文件中包含的内容
+                        n++;
+                    }
+                }
+            }
+            //绘制参考坐标
+            function drawcor() {
+                //绘制横线
+                for (var i = 0; i < 3; i++) {
+                    for (var j = 0; j <= 16; j++) {
+                        ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                        ctext.strokeStyle = "grey";
+                        var x0 = 0;
+                        var y0 = j * edge;
+                        var x1 = edge * 16;
+                        var y1 = edge * j;
+                        ctext.beginPath();
+                        if (upTranslation == true) {
+                            y0 = j * edge - length;
+                            y1 = j * edge - length;
+                        }
+                        if (downTranslation == true) {
+                            y0 = j * edge + length;
+                            y1 = j * edge + length;
+                        }
+                        if (leftTranslation == true) {
+                            x0 = 0 - length;
+                            x1 = edge * 16 - length;
+                        }
+                        if (rightTranslation == true) {
+                            x0 = 0 + length;
+                            x1 = edge * 16 + length;
+                        }
+                        if (leftOblique == true) {//左斜变换y的值未变
+                            x0 = (j * edge) * tan15;
+                            x1 = edge * 16 + (j * edge * tan15);
+                        }
+                        if (shrugged == true) {
+                            y1 = j * edge - tan15 * edge * 16;
+                        }
+                        if (clockwise == true) {
+                            var dx = x0 - edge * 16 / 2;
+                            var dy = y0 - edge * 16 / 2;
+                            x0 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y0 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                            dx = x1 - edge * 16 / 2;
+                            dy = y1 - edge * 16 / 2;
+                            x1 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y1 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        if (counterclockwise == true) {
+                            var dx = x0 - edge * 16 / 2;
+                            var dy = y0 - edge * 16 / 2;
+                            x0 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y0 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                            dx = x1 - edge * 16 / 2;
+                            dy = y1 - edge * 16 / 2;
+                            x1 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y1 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        ctext.moveTo(startX + x0 + i * interval, startY + y0);
+                        ctext.lineTo(x1 + startX + i * interval, y1 + startY);
+                        ctext.stroke();
+                    }
+                }
+                //绘制纵线
+                for (var i = 0; i < 3; i++) {
+                    for (var j = 0; j <= 16; j++) {
+                        ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                        ctext.strokeStyle = "grey";
+                        var x2 = edge * j;
+                        var y2 = 0;
+                        var x3 = j * edge;
+                        var y3 = edge * 16;
+                        ctext.beginPath();
+                        if (upTranslation == true) {
+                            y2 = 0 - length;
+                            y3 = edge * 16 - length;
+                        }
+                        if (downTranslation == true) {
+                            y2 = 0 + length;
+                            y3 = edge * 16 + length;
+                        }
+                        if (leftTranslation == true) {
+                            x2 = edge * j - length;
+                            x3 = j * edge - length;
+                        }
+                        if (rightTranslation == true) {
+                            x2 = edge * j + length;
+                            x3 = j * edge + length;
+                        }
+                        if (leftOblique == true) {
+                            x3 = edge * j + 16 * edge * tan15;
+                        }
+                        if (shrugged == true) {
+                            y2 = 0 - tan15 * edge * j;
+                            y3 = 16 * edge - tan15 * edge * j;
+                        }
+                        if (clockwise == true) {
+                            dx = x2 - edge * 16 / 2;
+                            dy = y2 - edge * 16 / 2;
+                            x2 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y2 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                            dx = x3 - edge * 16 / 2;
+                            dy = y3 - edge * 16 / 2;
+                            x3 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y3 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        if (counterclockwise == true) {
+                            dx = x2 - edge * 16 / 2;
+                            dy = y2 - edge * 16 / 2;
+                            x2 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y2 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                            dx = x3 - edge * 16 / 2;
+                            dy = y3 - edge * 16 / 2;
+                            x3 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y3 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        ctext.moveTo(startX + x2 + i * interval, startY + y2);
+                        ctext.lineTo(x3 + startX + i * interval, y3 + startY);
+                        ctext.stroke();
+                    }
+                }
+            }
+            function clearcanvas() {
+                ctext.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            function draw(record, n)//画名字
+            {
+                var name = record.split('\r\n');
+                var start = false;//用于寻找起点,start为真时表示起点
+                ctext.lineWidth = 10;//设置画笔的宽度和颜色
+                ctext.strokeStyle = "black";
+                //开始读取文件
+                for (var i = 0; i < name.length; i++) {
+                    //寻找起点
+                    if (name[i] == 'end') {
+                        ctext.stroke();//若遇到‘end’则结束该条线段的绘制，并且将start重置为true
+                        start = true;
+                        continue;
+                    }
+                    var point = name[i].split(',');//坐标中去除“，”成为point数组
+                    if (point.length < 2)//此条件判断是L1还是坐标对，L1经过split函数处理后长度为1
+                    {
+                        start = true;//找到“L1”表明找到了起点
+                        continue;//继续寻找起始坐标
+                    }
+                    if (start) {//若start为真则表明为起点，用moveTo()函数
+                        var x0 = point[0] * edge;
+                        var y0 = point[1] * edge;
+                        if (upTranslation == true) {
+                            y0 = point[1] * edge - length;
+                        }
+                        if (downTranslation == true) {
+                            y0 = point[1] * edge + length;
+                        }
+                        if (leftTranslation == true) {
+                            x0 = point[0] * edge - length;
+                        }
+                        if (rightTranslation == true) {
+                            x0 = point[0] * edge + length;
+                        }
+                        if (leftOblique == true) {
+                            x0 = point[0] * edge + y0 * tan15;
+                        }
+                        if (shrugged == true) {
+                            y0 = point[1] * edge - tan15 * x0;
+                        }
+                        if (ySymmetrical == true) {
+                            y0 = edge * 16 - y0;
+                        }
+                        if (xSymmetrical == true) {
+                            x0 = edge * 16 - x0;
+                        }
+                        if (clockwise == true) {
+                            var dx = x0 - edge * 16 / 2;
+                            var dy = y0 - edge * 16 / 2;
+                            x0 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y0 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        if (counterclockwise == true) {
+                            var dx = x0 - edge * 16 / 2;
+                            var dy = y0 - edge * 16 / 2;
+                            x0 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y0 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+
+                        ctext.beginPath();
+                        ctext.moveTo(startX + x0 + n * interval, startY + y0);
+                        start = false;//表示已经过了起点点
+                    }
+                    else {
+                        var x1 = point[0] * edge;
+                        var y1 = point[1] * edge;
+                        if (upTranslation == true) {
+                            y1 = point[1] * edge - length;
+                        }
+                        if (downTranslation == true) {
+                            y1 = point[1] * edge + length;
+                        }
+                        if (leftTranslation == true) {
+                            x1 = point[0] * edge - length;
+                        }
+                        if (rightTranslation == true) {
+                            x1 = point[0] * edge + length;
+                        }
+                        if (leftOblique == true) {
+                            x1 = point[0] * edge + y1 * tan15;
+                        }
+                        if (ySymmetrical == true) {
+                            y1 = edge * 16 - y1;
+                        }
+                        if (xSymmetrical == true) {
+                            x1 = edge * 16 - x1;
+                        }
+                        if (shrugged == true) {
+                            y1 = point[1] * edge - tan15 * x1;
+                        }
+                        if (clockwise == true) {
+                            var dx = x1 - edge * 16 / 2;
+                            var dy = y1 - edge * 16 / 2;
+                            x1 = dx * Math.cos(degree) - dy * Math.sin(degree) + edge * 16 / 2;
+                            y1 = dy * Math.cos(degree) + dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        if (counterclockwise == true) {
+                            var dx = x1 - edge * 16 / 2;
+                            var dy = y1 - edge * 16 / 2;
+                            x1 = dx * Math.cos(degree) + dy * Math.sin(degree) + edge * 16 / 2;
+                            y1 = dy * Math.cos(degree) - dx * Math.sin(degree) + edge * 16 / 2;
+                        }
+                        ctext.lineTo(x1 + startX + n * interval, y1 + startY);
+                        start = false;
+                    }
+                }
+            }
+        </script>
+</body>
+
+</html>
