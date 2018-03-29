@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        投影变换
+    </title>
+</head>
+
+<body>
+    <div1 style="margin-top:5px;">
+        <div>
+            <from style="position: absolute;margin-left:20pX;margin-top:2px;font-size:15px;font-family:宋体;">
+                <strong>·请选择中国版图数据文件：</strong>
+                <input id="File" type="file" multiple="mutifile" />
+                <strong>·地图投影变换：</strong>
+                <button type="button" onclick="china();Lambert()">兰伯特投影转换</button>
+                <button type="button" onclick="china();Mecator()">墨卡托投影转换</button>
+            </from>
+        </div>
+        <div>
+            <from style="position:absolute;margin-left:20pX;margin-top:30px;font-size:15px;font-family:宋体;">
+                <strong>·请选择世界版图数据文件：</strong>
+                <input id="File1" type="file" multiple="mutifile" />
+                <strong>·地图投影变换：</strong>
+                <button type="button" onclick="world();Mecator_world()">墨卡托投影转换</button>
+                <button type="button" onclick="world();GreatCircle()">绘制大圆航线</button>
+            </from>
+        </div>
+        <div style="position:absolute;margin-left:1000pX;border:1px solid rgb(0,0,0);width:170px;height:29px;border-radius: 5px;">
+            <div style="position:absolute;margin-left:10pX;margin-top:3px;font-size:15px;font-family:宋体;">
+                <button type="button" onclick="china();get();DrawNetworks()">显示1</button>
+                <button type="button" onclick="origins();">恢复默认状态</button>
+            </div>
+        </div>
+        <div style="position:absolute;margin-left:1000pX;margin-top:33px;border:1px solid rgb(0,0,0);width:170px;height:29px;border-radius: 5px;">
+            <div style="position:absolute;margin-left:10pX;margin-top:3px;font-size:15px;font-family:宋体;">
+                <button type="button" onclick="world();get1();DrawNetworks()">显示2</button>
+                <button type="button" onclick="origins();">恢复默认状态</button>
+            </div>
+        </div>
+        <p style="position: absolute;margin-left:500px;margin-top:58px;font-size:12px;font-family:宋体;">注：若显示中国地图请选择显示1；若选择世界地图请选择显示2</p>
+    </div1>
+
+    <canvas id="canvas" style="border:1px solid #000;position:absolute;margin-top:70px;margin-left:15px;"></canvas>
+    <script>
+        var times;
+        var canvas = document.getElementById('canvas');
+        var ctext = canvas.getContext('2d');
+        canvas.width = 1230;
+        canvas.height = 570;
+        var PI = 3.141592654;
+        var e2, e12, e, a, b;
+        var latmax, latmin, longmax, longmin, scale, xoff, yoff;
+
+        var lam = false;
+        var mecaw = false;
+        var meca = false;
+        var c = false;
+        var w = false;
+        var gc = false;
+
+        var point = new Array(2);//设置数组存储大圆航线计算中的坐标对
+        for (var i = 0; i < 2; i++) {
+            point[i] = new Array(2);
+        }
+
+        function origins() {//恢复默认状态
+            lam = false;
+            meca = false;
+            mecaw = false;
+            c = false;
+            w = false;
+            gc = false;
+            clearcanvas();
+        }
+        function setc() {//设置北京54坐标系的相关参数
+            e2 = 0.006693421622966;
+            e12 = 0.006738525414684;
+            e = Math.sqrt(e2);
+            a = 6378245;
+            b = 6356863.0187730473;
+        }
+        function setw() {//设置wgs84的相关参数
+            e2 = 0.00669437999013;
+            e12 = 0.006739496742227;
+            e = Math.sqrt(e2);
+            a = 6378137;
+            b = 6356752.3142;
+        }
+        function china() {//若显示的是中国的地图，则放大倍数为9
+            c = true;
+            times = 9;
+        }
+        function world() {//若显示的是世界的地图，则放大倍数为3
+            w = true;
+            times = 3;
+        }
+        function Lambert() {//重绘中国地图——兰伯特投影的地图
+            lam = true;
+            clearcanvas();
+            DrawNetworks();
+            get();
+        }
+        function Mecator_world() {//重绘世界地图——墨卡托投影的地图
+            mecaw = true;
+            clearcanvas();
+            DrawNetworks();
+            get1();
+        }
+        function Mecator() {//重绘中国地图——墨卡托投影的地图
+            meca = true;
+            clearcanvas();
+            DrawNetworks();
+            get();
+        }
+        function offScale_c_L() {//设置地图缩放比例及偏移量，以下数值为各个地图及投影之后坐标值（用程序计算得出）
+            latmax = 6180526.183353;
+            latmin = 483650.735977;
+            longmax = 2288389.56623;
+            longmin = -2674427.06533;
+            scale = 600 / Math.max(latmax - latmin, longmax - longmin);
+            xoff = longmin;
+            yoff = latmax;
+        }
+        function offScale_c_m() {
+            latmax = 7053107.3370;
+            latmin = 410579.5827;
+            longmax = 15003310.14288296;
+            longmin = 8189159.635235;
+            scale = 600 / Math.max(latmax - latmin, longmax - longmin);
+            xoff = longmin;
+            yoff = latmax;
+        }
+        function offScale_w_m() {
+            latmax = 18356398.10047789;
+            latmin = -20550584.2718469;
+            longmax = 20037508.3535635;
+            longmin = -20037508.357533504;
+            scale = 600 / Math.max(latmax - latmin, longmax - longmin);
+            xoff = longmin;
+            yoff = latmax;
+        }
+        function sortPoint(a, b)//排序函数
+        {
+            return b[0] - a[0];
+        }
+        function get() { //读取中国地图
+            var files = document.getElementById('File').files;
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var reader = new FileReader();
+                reader.readAsText(file);//以文本形式读取文件
+                //成功读取
+                reader.onload = function (e) {
+                    record = this.result;//读取文件
+                    draw(record);//绘制该文件中包含的内容
+                }
+            }
+        }
+        function get1() {       //读取世界地图
+            var files = document.getElementById('File1').files;
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var reader = new FileReader();
+                reader.readAsText(file);//以文本形式读取文件
+                //成功读取
+                reader.onload = function (e) {
+                    record = this.result;//读取文件
+                    draw(record);//绘制该文件中包含的内容
+                }
+            }
+        }
+        function GreatCircleCal(lat1, long1, lat2, long2) {//大圆航线中点坐标的计算函数
+            lat1 = lat1 * PI / 180;
+            long1 = long1 * PI / 180;
+            lat2 = lat2 * PI / 180;
+            long2 = long2 * PI / 180;
+            var bx = Math.cos(lat2) * Math.cos(long2 - long1);
+            var by = Math.cos(lat2) * Math.sin(long2 - long1);
+            var latm = Math.atan2(Math.sin(lat1) + Math.sin(lat2), Math.sqrt((Math.cos(lat1) + bx) * (Math.cos(lat1) + bx) + by * by));
+            var lonm = long1 + Math.atan2(by, Math.cos(lat1) + bx);
+            return [lonm * 180 / PI, latm * 180 / PI];
+        }
+        function GreatCircle() {//大圆航线
+            point[0][0] = 116.4;
+            point[0][1] = 39.8;
+            point[1][0] = 2.2;
+            point[1][1] = 48.52;
+
+            for (var i = 0; i < 10; i++) {
+                for (var j = 0; j < point.length - 1; j = j + 2) {//每两个点之间取中点
+                    var temp = GreatCircleCal(point[j][1], point[j][0], point[j + 1][1], point[j + 1][0]);
+                    point.splice(j + 1, 0, temp);
+                }
+            }
+            point.sort(sortPoint);//排序
+            ctext.lineWidth = 2;//设置画笔的宽度和颜色
+            ctext.strokeStyle = "red";
+            if (mecaw == true) {
+                ctext.beginPath();
+                var temp1 = MecatorProjection(point[0][0], point[0][1]);
+                ctext.moveTo(temp1[0], temp1[1]);
+                for (var i = 1; i < point.length; i++) {//绘制大圆航线
+                    var temp2 = MecatorProjection(point[i][0], point[i][1]);
+                    ctext.lineTo(temp2[0], temp2[1]);
+                }
+                ctext.stroke();
+            }
+            else {
+                ctext.beginPath();
+                ctext.moveTo(point[0][0] * 3 + 600, canvas.height - point[0][1] * 3 - 300);
+                for (var i = 1; i < point.length; i++) {//绘制大圆航线
+                    ctext.lineTo(point[i][0] * 3 + 600, canvas.height - point[i][1] * 3 - 300);
+                }
+                ctext.stroke();
+            }
+        }
+        function LambertProjection(L, B) {//L表示经度，B表示纬度
+            //先将所有的经纬度化为弧度制
+            var L0 = 105 * PI / 180;//原点的经度
+            var B0 = 0;//原点的纬度
+            var B1 = 20 * PI / 180;
+            var B2 = 40 * PI / 180;//第一标准纬线和第二标准纬线
+
+            L = L * PI / 180;
+            B = B * PI / 180;
+            //计算中需要的变量
+            var m = Math.cos(B) / Math.sqrt(1 - e2 * Math.sin(B) * Math.sin(B));
+            var mb1 = Math.cos(B1) / Math.sqrt(1 - e2 * Math.sin(B1) * Math.sin(B1));
+            var mb2 = Math.cos(B2) / Math.sqrt(1 - e2 * Math.sin(B2) * Math.sin(B2));
+
+            var t = Math.tan((PI / 4 - B / 2) / Math.pow(((1 - e * Math.sin(B)) / (1 + e * Math.sin(B))), e / 2));
+            var tb1 = Math.tan((PI / 4 - B1 / 2) / Math.pow(((1 - e * Math.sin(B1)) / (1 + e * Math.sin(B1))), e / 2));
+            var tb2 = Math.tan((PI / 4 - B2 / 2) / Math.pow(((1 - e * Math.sin(B2)) / (1 + e * Math.sin(B2))), e / 2));
+            var t0 = Math.tan((PI / 4 - B0 / 2) / Math.pow(((1 - e * Math.sin(B0)) / (1 + e * Math.sin(B0))), e / 2));
+            var n = Math.log(mb1 / mb2) / Math.log(tb1 / tb2);
+            var F = mb1 / (n * Math.pow(tb1, n));
+            var r = a * F * Math.pow(t, n);
+            var r0 = a * F * Math.pow(t0, n);
+            var degree = n * (L - L0);
+
+            var x = r0 - r * Math.cos(degree);
+            var y = r * Math.sin(degree);
+            if (c == true && lam == true) {//不同的地图及投影有不同的缩放比例及偏移
+                offScale_c_L();
+            }
+            var x_ = scale * (y - xoff) + 300;
+            var y_ = scale * (yoff - x);
+            return [x_, y_];
+        }
+        function MecatorProjection(L, B) {
+            L = L * PI / 180;
+            B = B * PI / 180;
+            var L0 = 0;
+            var B0 = 0;
+            var K = (a * a / b) / Math.sqrt(1 + e12 * Math.cos(B0) * Math.cos(B0));
+            var x = K * Math.log(Math.tan(PI / 4 + B / 2) * Math.pow(((1 - e * Math.sin(B)) / (1 + e * Math.sin(B))), e / 2));
+            var y = K * (L - L0);
+            if (c == true && meca == true) {
+                offScale_c_m();
+                var x_ = scale * (y - xoff) + 300;
+                var y_ = scale * (yoff - x);
+            }
+            if (w == true && mecaw == true) {
+                offScale_w_m();
+                var x_ = scale * (y - xoff) + 300;
+                var y_ = scale * (yoff - x);
+            }
+            return [x_, y_];
+        }
+        function DrawNetworks() {        //绘制经纬网
+            //绘制纬线
+            for (var i = -18; i <= 18; i++) {//36*5=180纬线
+                for (var j = -36; j < 36; j++) {//72*5=360经线
+                    ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                    ctext.strokeStyle = "grey";
+                    var x0 = j * 5;
+                    var y0 = i * 5;
+                    var x1 = x0 + 5;
+                    var y1 = y0;//纬线空5°绘出
+
+                    //得到乘以相应倍数和变换后的坐标
+                    if (c == true) {
+                        var x0_ = x0 * times - 350;
+                        var y0_ = canvas.height - y0 * times;
+                        var x1_ = x1 * times - 350;
+                        var y1_ = canvas.height - y1 * times;
+                    }
+                    if (w == true) {
+                        var x0_ = x0 * times + 600;
+                        var y0_ = canvas.height - y0 * times - 300;
+                        var x1_ = x1 * times + 600;
+                        var y1_ = canvas.height - y1 * times - 300;
+                    }
+                    ctext.beginPath();
+                    if (lam == true) {//若用户操作了中国地区的兰伯特投影变换
+                        setc();//设置北京54坐标的相关参数
+                        var point0 = LambertProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = LambertProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (meca == true) {
+                        setc();
+                        var point0 = MecatorProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (mecaw == true) {
+                        setw();
+                        var point0 = MecatorProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    ctext.moveTo(x0_, y0_);
+                    ctext.lineTo(x1_, y1_);
+                    ctext.stroke();
+                }
+            }
+            for (var i = -36; i <= 36; i++) {
+                for (var j = -18; j < 18; j++) {
+                    ctext.lineWidth = 1;//设置画笔的宽度和颜色
+                    ctext.strokeStyle = "grey";
+                    var x0 = i * 5;
+                    var y0 = j * 5;
+                    var x1 = x0;
+                    var y1 = y0 + 5;
+                    if (c == true) {
+                        var x0_ = x0 * times - 350;
+                        var y0_ = canvas.height - y0 * times;
+                        var x1_ = x1 * times - 350;
+                        var y1_ = canvas.height - y1 * times;
+                    }
+                    if (w == true) {
+                        var x0_ = x0 * times + 600;
+                        var y0_ = canvas.height - y0 * times - 300;
+                        var x1_ = x1 * times + 600;
+                        var y1_ = canvas.height - y1 * times - 300;
+                    }
+                    ctext.beginPath();
+
+                    if (lam == true) {
+                        setc();
+                        var point0 = LambertProjection(x0, y0);
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = LambertProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (meca == true) {
+                        setc();
+                        var point0 = MecatorProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (mecaw == true) {
+                        setw();
+                        var point0 = MecatorProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    ctext.moveTo(x0_, y0_);
+                    ctext.lineTo(x1_, y1_);
+                    ctext.stroke();
+                }
+            }
+        }
+        function clearcanvas() {
+            ctext.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function draw(record)//画地图
+        {
+            var name = record.split('\r\n');
+            var start = false;//用于寻找起点,start为真时表示起点
+            ctext.lineWidth = 1;//设置画笔的宽度和颜色
+            ctext.strokeStyle = "black";
+            //开始读取文件
+            for (var i = 0; i < name.length; i++) {
+                //寻找起点
+                if (name[i] == 'END') {
+                    ctext.stroke();//若遇到‘end’则结束该条线段的绘制，并且将start重置为true
+                    start = true;
+                    continue;
+                }
+                var point = name[i].split(',');//坐标中去除“，”成为point数组
+                if (point.length < 2)//此条件判断是L1还是坐标对，L1经过split函数处理后长度为1
+                {
+                    start = true;//找到“L1”表明找到了起点
+                    continue;//继续寻找起始坐标
+                }
+                if (start) {//若start为真则表明为起点，用moveTo()函数
+                    var x0 = point[0];
+                    var y0 = point[1];
+                    if (c == true) {
+                        var x0_ = x0 * times - 350;
+                        var y0_ = canvas.height - y0 * times;
+                    }
+                    if (w == true) {
+                        var x0_ = x0 * times + 600;
+                        var y0_ = canvas.height - y0 * times - 300;
+                    }
+                    ctext.beginPath();
+                    if (lam == true) {
+                        setc();
+                        var point0 = LambertProjection(x0, y0);
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                    }
+                    if (meca == true) {
+                        setc();
+                        var point0 = MecatorProjection(x0, y0);
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                    }
+                    if (mecaw == true) {
+                        setw();
+                        var point0 = MecatorProjection(x0, y0);//变换
+                        x0_ = point0[0];
+                        y0_ = point0[1];
+                    }
+                    ctext.moveTo(x0_, y0_);
+                    start = false;
+                }
+                else {
+                    var x1 = point[0];
+                    var y1 = point[1];
+                    if (c == true) {
+                        var x1_ = x1 * times - 350;
+                        var y1_ = canvas.height - y1 * times;
+                    }
+                    if (w == true) {
+                        var x1_ = x1 * times + 600;
+                        var y1_ = canvas.height - y1 * times - 300;
+                    }
+                    if (lam == true) {
+                        setc();
+                        var point1 = LambertProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (meca == true) {
+                        setc();
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    if (mecaw == true) {
+                        setw();
+                        var point1 = MecatorProjection(x1, y1);
+                        x1_ = point1[0];
+                        y1_ = point1[1];
+                    }
+                    ctext.lineTo(x1_, y1_);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
