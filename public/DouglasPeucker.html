@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        数据压缩
+    </title>
+</head>
+
+<body>
+    <div style="display:flex;flex-direction:row;margin-left:2%;">
+        <div style="font-size:15px;font-family:宋体;">
+            <strong>请选择中国版图数据文件：</strong>
+            <input id="File" type="file" multiple="mutifile" />
+        </div>
+        <div style="margin-left:-5%;">
+            <button type="button" onclick=" clearcanvas();get();">兰伯特投影显示</button>
+        </div>
+    </div>
+    <div style="display:flex;flex-direction:row;margin-left:2%;margin-top:10px;font-size:15px;font-family:宋体;">
+        <div>
+            <strong>请输入极差：</strong>
+            <input type="number" id="range">
+        </div>
+    </div>
+    <div style="display:flex;flex-direction:row;margin-left:2%;margin-top:10px;font-size:15px;font-family:宋体;">
+        <div>
+            <strong>经计算得出极差对应的压缩率为：</strong>
+            <input type="text" id="rate" value="rates">
+        </div>
+        <div style="margin-left:5%;">
+            <button type="button" onclick="origins(); Douglas();">压缩并显示</button>
+            <button type="button" onclick="origins();">恢复初始状态</button>
+            </from>
+        </div>
+    </div>
+    <canvas id="canvas" style="border:1px solid #000;margin-top:1%;margin-left:1%;"></canvas>
+    <script>
+        var canvas = document.getElementById('canvas');
+        var ctext = canvas.getContext('2d');
+        canvas.width = 1230;
+        canvas.height = 570;
+        var e2, e12, e, a, b;
+        e2 = 0.006693421622966;
+        e12 = 0.006738525414684;
+        e = Math.sqrt(e2);
+        a = 6378245;
+        b = 6356863.0187730473;
+
+        var latmax = 6180526.183353;
+        var latmin = 483650.735977;
+        var longmax = 2288389.56623;
+        var longmin = -2674427.06533;
+        var scale = 600 / Math.max(latmax - latmin, longmax - longmin);
+        var xoff = longmin;
+        var yoff = latmax;
+        var times = 9;
+        var finalnumber = 0;
+        var totalnumber=0;
+
+        function origins() {//恢复默认状态
+            clearcanvas();
+            finalnumber=0;
+            totalnumber=0;
+            document.getElementById('rate').value="rate";
+
+        }
+        function get() { //读取中国地图
+            var files = document.getElementById('File').files;
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var reader = new FileReader();
+                reader.readAsText(file);//以文本形式读取文件
+                //成功读取
+                reader.onload = function (e) {
+                    record = this.result;//读取文件
+                    draw(record);//绘制该文件中包含的内容
+                }
+            }
+        }
+        function distance(point1, point2) {
+            return Math.sqrt((point1[0] - point2[0]) * (point1[0] - point2[0]) + (point1[1] - point2[1]) * (point1[1] - point2[1]));
+        }
+
+        function showline(final) {
+            for (var t = 0; t < final.length; t++) {
+                final[t][0] = scale * (final[t][0] - xoff) + 300;
+                final[t][1] = scale * (yoff - final[t][1]);
+            }
+            ctext.beginPath();
+            ctext.moveTo(final[0][0], final[0][1]);
+            for (var j = 1; j < final.length; j++) {
+                ctext.lineTo(final[j][0], final[j][1]);
+            }
+            ctext.stroke();
+        }
+        function Douglas() {
+            var file = document.getElementById('File').files[0];//读取文件
+            var reader = new FileReader();
+            reader.readAsText(file);
+            var record = null;
+            reader.onload = function (e) {
+                record = this.result;//读取文件
+                record = record.split('\r\n');
+                for (var i = 0; i < record.length - 1; i++) {//读取文件寻找起点
+                    var point = record[i].split(',');
+                    if (record[i] == 'END') {
+                        break;//文件读取截止
+                    }
+                    if (point.length == 1) {//找到线段的开始
+                        i = i + 1;
+                        var data = [];
+                        for (var j = 0; record[i] != 'END'; j++) {//新建的线段,坐标放入数组中
+                            var point0 = record[i].split(',');
+                            data[j] = point0;
+                            i++;
+                        }
+                        //进行兰伯特投影,坐标变换
+                        for (var t = 0; t < data.length; t++) {
+                            var point = LambertProjection(data[t][0], data[t][1]);
+                            data[t][0] = point[0];
+                            data[t][1] = point[1];
+                        }
+                        totalnumber+=data.length;
+                        //判断线段是闭合还是非闭合的，若是闭合的则取起始点到距离起始点最远距离的点作为终点组成新线段
+                        if (data[0][0] == data[data.length - 1][0] && data[0][1] == data[data.length - 1][1]) {
+                            var max = 0, temp;
+                            for (var t = 0; t < data.length; t++) {
+                                var d = distance(data[0], data[t]);
+                                if (d > max) {
+                                    max = d;
+                                    temp = t;
+                                }
+                            }
+                            var final = [];
+                            var datatemp1 = data.slice(0, temp);
+                            ADouglas(datatemp1, final);
+                            showline(final);
+                            var final = [];
+                            var datatemp2 = data.slice(temp, data.length);
+                            ADouglas(datatemp2, final);
+                            showline(final);
+                        }
+                        else {
+                            var final = [];
+                            ADouglas(data, final);//进行压缩
+                            showline(final);
+                        }
+                        continue;//继续寻找
+                    }
+                }
+                var rate=finalnumber/totalnumber*100;
+                rate=rate.toFixed(2);
+                document.getElementById('rate').value=rate+"%";
+
+            }
+        }
+        function ADouglas(data, final) {
+            var range = parseInt(document.getElementById('range').value);
+            //当进行到点数小于等于2时，不再进行，将剩余的点数加入final数组
+            if (data.length == 1) {
+                final.push(data[0]);
+                finalnumber += 1;
+                return;
+            }     
+            if (data.length ==2) {
+                final.push(data[0]);
+                final.push(data[data.length - 1]);
+                finalnumber += 2;
+                return;
+            }
+            //计算直线的方程中的系数
+            var a = data.length - 1;
+            var temp = Math.sqrt((data[0][1] - data[a][1]) * (data[0][1] - data[a][1]) + (data[0][0] - data[a][0]) * (data[0][0] - data[a][0]));
+            var A = (data[0][1] - data[a][1]) / temp;
+            var B = (data[a][0] - data[0][0]) / temp;
+            var C = (data[0][0] * data[a][1] - data[a][0] * data[0][1]) / temp;
+
+            //找到距离中的最大值
+            var max = 0,record;
+            for (var i = 1; i < data.length - 1; i++) {
+                var distance = Math.abs(A * data[i][0] + B * data[i][1] + C);
+                if (distance > max) {
+                    max = distance;
+                    record=i;
+                }
+            }
+            
+            if (max <= range) {
+                final.push(data[0]);
+                final.push(data[data.length - 1]);
+                finalnumber += 2;
+                return;
+            }
+            var dataTemp1 = data.slice(0, record);
+            var dataTemp2 = data.slice(record, data.length);
+            ADouglas(dataTemp1, final);
+            ADouglas(dataTemp2, final);
+        }
+        function LambertProjection(L, B) {//L表示经度，B表示纬度
+            //先将所有的经纬度化为弧度制
+            var L0 = 105 * Math.PI / 180;//原点的经度
+            var B0 = 0;//原点的纬度
+            var B1 = 20 * Math.PI / 180;
+            var B2 = 40 * Math.PI / 180;//第一标准纬线和第二标准纬线
+            L = L * Math.PI / 180;
+            B = B * Math.PI / 180;
+            //计算中需要的变量
+            var m = Math.cos(B) / Math.sqrt(1 - e2 * Math.sin(B) * Math.sin(B));
+            var mb1 = Math.cos(B1) / Math.sqrt(1 - e2 * Math.sin(B1) * Math.sin(B1));
+            var mb2 = Math.cos(B2) / Math.sqrt(1 - e2 * Math.sin(B2) * Math.sin(B2));
+            var t = Math.tan((Math.PI / 4 - B / 2) / Math.pow(((1 - e * Math.sin(B)) / (1 + e * Math.sin(B))), e / 2));
+            var tb1 = Math.tan((Math.PI / 4 - B1 / 2) / Math.pow(((1 - e * Math.sin(B1)) / (1 + e * Math.sin(B1))), e / 2));
+            var tb2 = Math.tan((Math.PI / 4 - B2 / 2) / Math.pow(((1 - e * Math.sin(B2)) / (1 + e * Math.sin(B2))), e / 2));
+            var t0 = Math.tan((Math.PI / 4 - B0 / 2) / Math.pow(((1 - e * Math.sin(B0)) / (1 + e * Math.sin(B0))), e / 2));
+            var n = Math.log(mb1 / mb2) / Math.log(tb1 / tb2);
+            var F = mb1 / (n * Math.pow(tb1, n));
+            var r = a * F * Math.pow(t, n);
+            var r0 = a * F * Math.pow(t0, n);
+            var degree = n * (L - L0);
+
+            var x = r0 - r * Math.cos(degree);
+            var y = r * Math.sin(degree);
+            return [y, x];
+        }
+        function clearcanvas() {
+            ctext.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        function draw(record)//画地图
+        {
+            var name = record.split('\r\n');
+            var start = false;//用于寻找起点,start为真时表示起点
+            ctext.lineWidth = 1;//设置画笔的宽度和颜色
+            ctext.strokeStyle = "black";
+            //开始读取文件
+            for (var i = 0; i < name.length; i++) {
+                //寻找起点
+                if (name[i] == 'END') {
+                    ctext.stroke();//若遇到‘end’则结束该条线段的绘制，并且将start重置为true
+                    start = true;
+                    continue;
+                }
+                var point = name[i].split(',');//坐标中去除“，”成为point数组
+                if (point.length < 2)//此条件判断是L1还是坐标对，L1经过split函数处理后长度为1
+                {
+                    start = true;//找到“L1”表明找到了起点
+                    continue;//继续寻找起始坐标
+                }
+                if (start) {//若start为真则表明为起点，用moveTo()函数
+                    var x0 = point[0];
+                    var y0 = point[1];
+                    ctext.beginPath();
+                    var point0 = LambertProjection(x0, y0);
+                    var x0_ = scale * (point0[0] - xoff) + 300;
+                    var y0_ = scale * (yoff - point0[1]);
+                    ctext.moveTo(x0_, y0_);
+                    start = false;
+                }
+                else {
+                    var x1 = point[0];
+                    var y1 = point[1];
+                    var point1 = LambertProjection(x1, y1);
+                    var x1_ = scale * (point1[0] - xoff) + 300;
+                    var y1_ = scale * (yoff - point1[1]);
+                    ctext.lineTo(x1_, y1_);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
