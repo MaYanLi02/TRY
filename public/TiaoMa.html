@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        跳马问题
+    </title>
+</head>
+
+<body>
+    <!-- 设计开始界面的设计 -->
+    <div style="width:500pX;height:310pX;margin-left:20pX;margin-top:20pX;border:medium double rgb(0,0,0)">
+        <h style="font-family:宋体;margin-left:180pX;margin-top:50pX;font-size:25pX;">
+            <strong>跳马问题</strong>
+        </h>
+        <p style="font-family:宋体;font-size:15pX;margin-top:5pX;margin-left:5pX;">&nbsp
+            <ins>问题描述</ins>:有一m*n的棋盘(即棋盘由m行和n列)，一马放在棋盘中任意位置，马按中国象棋跳法，从初始位置起跳，跳至边界后返回，求所有能返回初始位置的周游路线；</p>
+        <from style="margin-left:50pX;">
+            选择棋盘行数：
+            <input type="number" name="row" id="row" min="0" maX="10" />
+        </from>
+        <br>
+        <br>
+        <from style="margin-left:50pX;">
+            选择棋盘列数：
+            <input type="number" name="column" id="column" min="0" maX="10" />
+        </from>
+        <br>
+        <br>
+        <from style="margin-left:50pX;">
+            起始点所在行：
+            <input type="number" name="startY" id="startY">
+        </from>
+        <br>
+        <br>
+        <from style="margin-left:50pX;">
+            起始点的所在列：
+            <input type="number" name="startX" id="startX">
+        </from>
+        <br>
+        <br>
+        <button style="margin-left:350pX;" type="button" onclick="Start()">确定</button>
+    </div>
+
+    <script>  
+        var MAXX, MAXY, start_x, start_y;
+        var MAXSTEP = 50;
+        var record = 0;
+        //创建二维数组path存储已经走过的路径
+        var path = new Array(parseInt(MAXSTEP) + 1);
+        for (var i = 0; i < (MAXSTEP + 1); i++) {
+            path[i] = new Array(2);
+        }
+        //在每个位置均有8个相向可以前进，在此处分别用一维数组存储相应方向即坐标增量的变化
+        var direction = 8;
+        var Adirection = new Array([2, 1], [1, 2], [-1, 2], [-2, 1], [-2, -1], [-1, -2], [1, -2], [2, -1]);
+
+        //设置boardOperation函数对棋盘中的数值做处理
+        function boardOperation(temp,board) {
+            //首先将全部棋盘的格子的数值为0
+            for (var i = 0; i < MAXY; i++) {
+                for (var j = 0; j < MAXX; j++) {
+                    board[i][j] = 0;
+                }
+            }
+            //将已存入path路径中的所有格子赋值为1代表已经经过
+            for (var i = 1; i < temp; i++) {
+                board[path[i][1]][path[i][0]] = 1;
+            }
+        }
+        function judgePath(x, y, board) {
+            //若改点已经被访问过则返回ture
+            if (board[y][x] != 0)
+                return true;
+            else {//若未经过该点，则将改点的值赋值为1，表示后续不能再经过
+                board[y][x] = 1;
+                return false;
+            }
+        }
+        function OutPut() {
+            if (record != 0) {
+                document.write("能返回初始位置的周游路线共有" + record + "种！！！");
+            }
+            if (record == 0) {
+                document.write("未找到路径！！！");
+            }
+        }
+        function Jump(x, y,temp, board) {
+            boardOperation(temp,board);
+            //在8个方向中任意选择一个方向，xy的坐标分别增加相应的增量 
+            for (var i = 0; i < direction; i++) {
+                var x1 = x + Adirection[i][0];
+                var y1 = y + Adirection[i][1];
+                //判断下一个位置是否出界
+                if (x1 < 0 || x1 > MAXX || y1 < 0 || y1 > MAXY)
+                    continue;//若出界则退回上一个位置[x,y]再重新选择一个方向（k++)
+                if (((x1 >= 0) && (x1 <= MAXX)) && ((y1 >= 0) && (y1 <= MAXY))) {//在边界内则均可进行下一步
+                    if (!judgePath(x1, y1, board)) {//判断该位置是否已经经过，未经过则存入路径中
+                        path[temp][0] = x1;
+                        path[temp][1] = y1;
+
+                        //判断是否回到原点
+                        if ((x1 == path[0][0]) && (y1 == path[0][1])) {
+                            record++;
+                            document.write("路径" + record + "为:");
+                            //一次输出路径
+                            for (var i = 0; i <= temp; i++) {
+                                document.write("(" + path[i][0] + "," + path[i][1] + ")");
+                                if (i != temp)
+                                    document.write(" -- ");
+                            }
+                            document.write("<br>");
+                        }
+                        else {//未回到原点则递归开始寻找下一个点
+                            Jump(x1, y1,temp+1, board);
+                        }
+                    }
+                }
+            }
+        }
+        function Start() {
+            // 获取用户输入的起始点的X/Y坐标以及棋盘的行列号
+            MAXX = document.getElementById("column").value;
+            MAXY = document.getElementById("row").value;
+            //将起始点加入路径中,并获取用户指定的开始坐标
+            start_x = path[0][0] = document.getElementById("startX").value;
+            start_y = path[0][1] = document.getElementById("startY").value;
+            // 创建棋盘，（此处使用二维数组表示）并将棋盘中的值都赋值为0表示“马”没有经过此点即可继续走
+            var board = new Array(MAXY + 1);
+            for (var i = 0; i < MAXY + 1; i++) {
+                board[i] = new Array(MAXX + 1);
+            }
+            for (var i = 0; i < MAXY + 1; i++) {
+                for (var j = 0; j < MAXX + 1; j++) {
+                    board[i][j] = 0;
+                }
+            }
+            board[path[0][1]][path[0][0]] = 1;
+            //开始执行
+            var temp=1;
+            Jump(parseInt(path[0][0]), parseInt(path[0][1]),temp,board);
+            OutPut();
+        }
+    </script>
+</body>
+
+</html>
