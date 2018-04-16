@@ -6,6 +6,12 @@ https://mayanli02.github.io/10160302-MaYanLi/helloworld.html
 hellocanvas:
 https://mayanli02.github.io/10160302-MaYanLi/hellocanvas.html
 
+跳马：
+https://mayanli02.github.io/TRY/public/TiaoMa.html
+
+最佳工作序列：
+https://mayanli02.github.io/TRY/public/Best_work_sequence.html
+
 空间对象编码：
 https://mayanli02.github.io/TRY/public/code.html
 
