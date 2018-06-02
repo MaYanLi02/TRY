@@ -29,3 +29,6 @@ https://mayanli02.github.io/TRY/public/DouglasPeucker.html
 
 四叉树四进制M码程序：
 https://mayanli02.github.io/TRY/public/Quadtr.html
+
+多边形拓扑生成算法：
+https://mayanli02.github.io/TRY/public/LeftTurnAlgorithm.html
