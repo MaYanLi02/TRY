@@ -36,3 +36,6 @@ https://mayanli02.github.io/TRY/public/LeftTurnAlgorithm.html
 地图符号：
 https://mayanli02.github.io/TRY/public/symbol.html
 
+矢量数据栅格化：
+https://mayanli02.github.io/TRY/public/grid.html
+
